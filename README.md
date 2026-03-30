@@ -1,5 +1,6 @@
 # Quad Tree Decomposition for Image Compression
 *CSC 445 Final Project*
+
 Jackie Alsobrook, Ethan Sexton
 
 ## Requirements
