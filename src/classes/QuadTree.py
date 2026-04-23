@@ -165,7 +165,6 @@ class ImageCompression(QuadTree):
     def animate(self, path="resources\\test.gif", show_tree=False, num_frames=50):
         output = []
         counter = 1
-        # Generate frames across a range of thresholds        
         for thresh in self.memo:
             print(f'Animating frame {counter}/{len(self.memo)}')
             image = self.display(thresh)
