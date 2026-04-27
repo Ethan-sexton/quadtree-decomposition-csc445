@@ -13,16 +13,16 @@ Build an image compression tool that recursively subdivides an image into quadra
 * Variance-base region merging
 
 ### GUI Requirements
-* Image upload (PNG/JPEG)
-* Threshold slider to control compression aggressiveness
-* Side-by-side before/after comparison
-* Animated quadtree subdivision (optional)
-* Display: original file size, compressed size, compression ratio, PSNR quality metric
+* Image upload (PNG/JPEG) X 
+* Threshold slider to control compression aggressiveness X
+* Side-by-side before/after comparison X
+* Animated quadtree subdivision (optional) X
+* Display: original file size, compressed size, compression ratio, PSNR quality metric X
 
 ### Expected Deliberables
-* Working quadtree decomposition on real images
-* Before and after image comparison
-* Threshold control that produces different quality levels
-* File size and quality metrics
-* Analysis: threshold vs. quality vs. size trade-off
+* Working quadtree decomposition on real images X
+* Before and after image comparison X
+* Threshold control that produces different quality levels X
+* File size and quality metrics X
+* Analysis: threshold vs. quality vs. size trade-off 
 
