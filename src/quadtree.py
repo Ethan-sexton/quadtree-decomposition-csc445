@@ -33,6 +33,7 @@ class QuadTreeApp:
         self.page_threshold_sliders = []
         self.page_original_labels = []
         self.page_psnr_labels = []
+        self.page_ratio_labels = []
         self.compressor = None
         self.page_progress_bars = []
         
@@ -81,10 +82,14 @@ class QuadTreeApp:
         for psnr_lbl in self.page_psnr_labels:
             psnr_lbl.config(text="PSNR: N/A")
         
+        for ratio_lbl in self.page_ratio_labels:
+            ratio_lbl.config(text="Ratio: O/C")
+        
         for progress_bar in self.page_progress_bars:
             progress_bar.pack_forget()
     
     def updateWindowSize(self, image_height, image_width):
+        # Can remove if fullscreen is used
         window_width = max(1200, image_width * 2 + 150)
         window_height = max(800, image_height + 300)
         self.root.geometry(f"{window_width}x{window_height}")
@@ -98,12 +103,27 @@ class QuadTreeApp:
             if self.threshold < len(self.memoImages):
                 newim = ImageTk.PhotoImage(self.memoImages[self.threshold])
                 if c:
-                    newim = ImageTk.PhotoImage(cv2.cvtColor(self.memoImages[self.threshold], cv2.COLOR_BGR2RGB)) 
+                    temp_im = Image.fromarray(self.compressor.memo[self.threshold])
+                    newim = ImageTk.PhotoImage(temp_im)
                 img_lbl.config(image=newim)
                 img_lbl.image = newim
         for new_lbl in self.page_new_size_labels:
             if self.threshold < len(self.memoSizes):
-                new_lbl.config(text=self.memoSizes[self.threshold])
+                new_lbl.config(text=f"New: {self.memoSizes[self.threshold]:.2f} kb")
+        
+            self.label_psnr()
+            self.label_ratio()
+
+        if hasattr(self, 'show_tree_var') and self.show_tree_var.get() and self.compressor:
+            self.update_tree_display()
+    
+    def toggle_tree_display(self, show_tree_var):
+        if show_tree_var.get() and self.compressor and self.threshold < len(self.memoImages):
+            self.update_tree_display()
+        else:
+            self.setImage(self.threshold, c=True)
+    
+    def label_psnr(self):
         for psnr_lbl in self.page_psnr_labels:
             if self.compressor and self.threshold < 255:
                 psnr_val = self.compressor.psnr(self.threshold)
@@ -116,15 +136,20 @@ class QuadTreeApp:
                     psnr_lbl.config(text=f"PSNR: {psnr:.2f} dB")
                 else:
                     psnr_lbl.config(text="PSNR: N/A")
-        
-        if hasattr(self, 'show_tree_var') and self.show_tree_var.get() and self.compressor:
-            self.update_tree_display()
     
-    def toggle_tree_display(self, show_tree_var):
-        if show_tree_var.get() and self.compressor and self.threshold < len(self.memoImages):
-            self.update_tree_display()
-        else:
-            self.setImage(self.threshold, c=True)
+    def label_ratio(self):
+        for ratio_lbl in self.page_ratio_labels:
+            if self.compressor and self.threshold < 255:
+                ratio_val = self.compressor.get_ratio(self.threshold)
+            else:
+                if self.threshold < len(self.memoImages) and len(self.memoImages) > 0:
+                    original_r = float(self.memoSizes[0])
+                    processed_r = float(self.memoSizes[self.threshold])
+                    print(original_r, processed_r)
+                    ratio_val = original_r / processed_r
+                else:
+                    ratio_val = "O/C"
+            ratio_lbl.config(text=f"Ratio: {ratio_val:.2f}")
     
     def update_tree_display(self):
         if not self.compressor:
@@ -141,7 +166,7 @@ class QuadTreeApp:
         # Draw rectangles on the image
         rects = self.compressor.rectangles.get(self.threshold, [])
         for xmin, xmax, ymin, ymax in rects:
-            cv2.rectangle(img_data, (ymin, xmin), (ymax, xmax), (0, 255, 0), 2)
+            cv2.rectangle(img_data, (ymin, xmin), (ymax, xmax), (0, 255, 0), 1)
         
         if len(img_data.shape) == 3 and img_data.shape[2] == 3:
             img_data = cv2.cvtColor(img_data, cv2.COLOR_BGR2RGB)
@@ -190,9 +215,9 @@ class QuadTreeApp:
         success, buffer = cv2.imencode('.jpeg', image, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
         if success:
             kb_size = len(buffer) / 1024
-            self.memoSizes.append(f"New: {kb_size:.2f} KB")
+            self.memoSizes.append(kb_size)
         else:
-            self.memoSizes.append("Null")
+            self.memoSizes.append(None)
         self.memoImages.append(Image.fromarray(image))
     
     def saveImage(self):
@@ -219,7 +244,8 @@ class QuadTreeApp:
         
         self.memoImages = []
         self.memoSizes = []
-        size_str = f"Original size: {(os.path.getsize(self.file) / 1024):.2f} KB"
+        size_str = f"Original size: {(os.path.getsize(self.file) / 1024) / 2:.2f} KB"
+        
         for lbl in self.page_og_size_labels:
             lbl.config(text=size_str)
         
@@ -248,7 +274,7 @@ class QuadTreeApp:
             progress_bar['value'] = 255
             progress_bar.update()
         
-        # Hide progress bars after 1 second
+        # Hide progress bar after 1 second
         self.root.after(1000, self.hide_progress_bars)
         
         for slider in self.page_threshold_sliders:
@@ -272,7 +298,7 @@ class QuadTreeApp:
 
         self.compressor = ImageCompression(cv_img.copy(), AverageStrategy())
 
-        size_str = f"Original size: {(os.path.getsize(self.file) / 1024):.2f} KB"
+        size_str = f"Original size: {(os.path.getsize(self.file) / 1024) / 2:.2f} KB"
         for lbl in self.page_og_size_labels:
             lbl.config(text=size_str)
 
@@ -302,7 +328,7 @@ class QuadTreeApp:
             
             file_size = self.compressor.get_file_size(thresh)
             print(file_size)
-            self.memoSizes.append(f"New: {file_size:.2f} KB")
+            self.memoSizes.append(file_size)
         
         for slider in self.page_threshold_sliders:
             slider.config(state="normal")
@@ -376,10 +402,12 @@ class QuadTreeApp:
         middle_container.pack(side="left", padx=20, fill="y")
         psnr_lbl = tk.Label(middle_container, text="PSNR: N/A", font=("Arial", 14, "bold"), fg="blue")
         psnr_lbl.pack(expand=True)
+        ratio_lbl = tk.Label(middle_container, text="Ratio: O:P", font=("Arial", 14, "bold"), fg="blue")
+        ratio_lbl.pack(expand=True)
         
         proc_container = tk.Frame(images_frame)
         proc_container.pack(side="left", padx=20)
-        proc_label_text = tk.Label(proc_container, text="Processed", font=("Arial", 12, "bold"))
+        proc_label_text = tk.Label(proc_container, text="Compressed", font=("Arial", 12, "bold"))
         proc_label_text.pack()
         img_lbl = tk.Label(proc_container, image="", bg="grey", width=400, height=400)
         img_lbl.pack()
@@ -396,6 +424,7 @@ class QuadTreeApp:
         self.page_threshold_sliders.append(threshold_sldr)
         self.page_original_labels.append(img_lbl_orig)
         self.page_psnr_labels.append(psnr_lbl)
+        self.page_ratio_labels.append(ratio_lbl)
             
         if not c:
             self.page_progress_bars.append(progress_bar)
@@ -440,10 +469,12 @@ class QuadTreeApp:
         file_path = filedialog.asksaveasfilename(defaultextension=".gif", filetypes=(("GIF files", "*.gif"),))
         if file_path:
             show_tree = self.show_tree_var.get() if hasattr(self, 'show_tree_var') else False
-            self.compressor.animate(path=file_path, show_tree=show_tree, num_frames=255)
+            self.compressor.animate(path=file_path, show_tree=show_tree)
             print(f"GIF saved to {file_path}")
 
 if __name__ == "__main__":
     root = tk.Tk()
     app = QuadTreeApp(root)
     root.mainloop()
+    
+    # I can also get the powerpoint sorted out tonight if we want
